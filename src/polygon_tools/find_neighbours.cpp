@@ -302,6 +302,21 @@ static PyObject* find_neighbours(PyObject* self, PyObject* args)
     size_t max_neighbours = 0;
     for (size_t idx = 0; idx < n_test_indices; ++idx)
         max_neighbours = std::max(max_neighbours, results.at(idx).size());
+    #define VECTOR_OUTPUT
+    #ifdef VECTOR_OUTPUT
+    std::vector<std::vector<long>> output;
+    for(int i = 0; i < n_test_indices; ++i)
+        output.push_back(std::vector<long>());
+    for(size_t i = 0; i < n_test_indices; ++i) {
+        const size_t length = results.at(i).size();
+        for (size_t j = 0; j < max_neighbours; ++j) {
+            if (j >= length)
+                output[i].push_back(-1);
+            else
+                output[i].push_back(results.at(i).at(j));
+        }
+    }
+    #else
     int** output = new int*[n_test_indices];
     for(int i = 0; i < n_test_indices; ++i)
         output[i] = new int[max_neighbours];
@@ -314,21 +329,28 @@ static PyObject* find_neighbours(PyObject* self, PyObject* args)
                 output[i][j] = results.at(i).at(j);
         }
     }
+    #endif
 
     #ifdef DEBUG
     std::cout << "OUTPUT BUILDING DONE" << std::endl << std::flush;
     #endif
 
     // write output
+    #ifdef VECTOR_OUTPUT
+    cnpy::npy_save(OUTPUT_FILE, output.data(), {n_test_indices, max_neighbours}, "w");
+    #else
     cnpy::npy_save(OUTPUT_FILE, output, {n_test_indices, max_neighbours}, "w");
+    #endif
 
     #ifdef DEBUG
     std::cout << "OUTPUT SAVING DONE" << std::endl << std::flush;
     #endif
 
+    #ifndef VECTOR_OUTPUT
     for(int i = 0; i < n_test_indices; ++i)
         delete[] output[i];
     delete[] output;
+    #endif
 
     Py_RETURN_NONE;
 }
