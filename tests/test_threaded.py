@@ -24,14 +24,14 @@ def test_neighours():
     time.sleep(1.)
     from polygon_tools import find_neighbours
 
-    find_neighbours()
-    results = np.load('data/neighbours.npy')
-    print(results)
+    results = find_neighbours()
+    # results = np.load('data/neighbours.npy')
+    # print(results)
     # expected:
     #   1 -> (0, 2, 3)
     #   4 -> (3,)
-    #   5 -> (0,)
+    #   5 -> (,)
     os.remove('data/polygons_todo.npz')
-    os.remove('data/neighbours.npy')
+    # os.remove('data/neighbours.npy')
 
 test_neighours()
