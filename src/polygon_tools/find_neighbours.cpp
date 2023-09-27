@@ -229,38 +229,47 @@ const size_t n_polygons = polygons.size();
 //    and check progress via python thread
 void find_neighbours_task(const size_t thread_idx)
 {
+    const size_t test_polygon_idx = test_indices.at(thread_idx);
+
     #ifdef DEBUG_TASK
-    std::cout << "TEST 0 " << test_polygon_idx << std::endl << std::flush;
+    std::cout << "CHECKPOINT 0 " << test_polygon_idx << " :: " << thread_idx << std::endl << std::flush;
     #endif
 
     Polygon test_polygon = polygons.at(test_polygon_idx);
 
     #ifdef DEBUG_TASK
-    std::cout << "TEST 1" << std::endl << std::flush;
+    std::cout << "CHECKPOINT 1" << std::endl << std::flush;
     #endif
 
     // loop through the other polygons searching for a neighouring polygon
-    size_t result_idx = 0;
+    std::vector<long> matches;
     for (size_t idx = 0; idx < polygons.size(); ++idx) {
         if (idx == test_polygon_idx)
             // do not check for shared edges with itself
             continue;
         #ifdef DEBUG_TASK
-        std::cout << "TEST 2" << std::endl << std::flush;
+        std::cout << "CHECKPOINT 2" << std::endl << std::flush;
         #endif
         const bool share_edge = test_polygon.share_edge(polygons.at(idx));
         if (share_edge) {
-            // add the currently checked index to the results
-            //  and increment the result index by one afterwards.
-            results.at(result_idx++) = idx;
-            //  by appending it to the corresponding vector
-            // results.push_back(idx);
-            std::cout<<"setting "<<idx<<std::endl;
+            // add the currently checked index to the matches
+            matches.push_back(idx);
+            #ifdef DEBUG_TASK
+            std::cout << "LOOP match " << idx << std::endl << std::flush;
+            #endif
         }
         #ifdef DEBUG_TASK
-        std::cout << "TEST 3" << std::endl << std::flush;
+        else {
+            std::cout << "LOOP no match " << idx << std::endl << std::flush;
+        }
+        std::cout << "CHECKPOINT 3" << std::endl << std::flush;
         #endif
     }
+    if (matches.size() == 0)
+        matches.push_back(-1);
+    // write results to disk
+    std::string out_path = OUTPUT_FILE_BASE + std::to_string(thread_idx); + ".npy";
+    cnpy::npy_save(out_path, &matches[0], {matches.size()}, "w");
     return;
 }
 
