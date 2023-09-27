@@ -22,8 +22,8 @@
 #include "cnpy.h"
 
 #define PARALLEL
-#define INPUT_FILE "data/polygons_todo.npz"
-#define OUTPUT_FILE_BASE "data/neighbours_"
+#define INPUT_FILE "data/_temp_polygons_todo.npz"
+#define OUTPUT_FILE_BASE "data/_temp_neighbours_"
 
 
 class Vertex {
@@ -338,13 +338,16 @@ static PyMethodDef pt_methods[] = {
     "are written to 'data/neighbours.npy.\n"
     "The input file is expected to contain arrays under keys of form\n"
     "'arr_0', 'arr_1', etc. The output file will contain a 2d array with\n"
-    "the indices of neighbouring polygons.\n"
+    "the indices of neighbouring polygons. The polygon indices for\n"
+    "which neighbours should be searched are expected to be passed\n"
+    "within the input .npz file unser the keys 'n_test_polygons' and\n"
+    "'test_indices'.\n"
+    "\n"
+    "\n"
+    "\n"
     "Parameters\n"
     "----------\n"
-    "n_polygons: int\n"
-    "    For which to find the neighbours.\n"
-    "test_polygon_indices: list\n"
-    "    Indices of the polygons for which neighbours are searched.\n"
+    "None\n"
     "\n"
     "Returns\n"
     "-------\n"

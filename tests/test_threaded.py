@@ -57,7 +57,7 @@ def polygon_setup(N_polygons, N_test):
         assert data[f'arr_{i}'].shape[1] == 2
     assert data['n_test_polygons'] == N_test, repr(N_test)
     assert len(data['test_indices']) == N_test, repr(N_test)
-    np.savez('data/polygons_todo.npz', **data)
+    np.savez('data/_temp_polygons_todo.npz', **data)
     print('Save done.', flush=True)
     time.sleep(0.2)
     return
@@ -65,18 +65,36 @@ def polygon_setup(N_polygons, N_test):
 
 def cleanup(N_test):
     time.sleep(0.2)
-    os.remove('data/polygons_todo.npz')
+    os.remove('data/_temp_polygons_todo.npz')
     for i in range(min(N_CPU, N_test)):
-        os.remove(f'data/neighbours_{i}.npy')
+        os.remove(f'data/_temp_neighbours_{i}.npy')
     print('Test files removed.')
     return
 
 
+def test_wrapper_0():
+    import polygon_tools
+    polygons = [[(0., -1.), (1., 0.), (0., 1.), (-1., 0.), (0., -1.)],
+                [(1., 0.), (3., 2.), (2., 3.), (0., 1.), (1., 0.)],
+                [(3., 2.), (2., 3.), (3., 4.), (4., 3.), (3., 2.)],
+                [(1., 0.), (3., 2.), (3., 0.), (1., 0.)],
+                [(3., 2.), (5., 1.5), (3., 0.), (3., 2.)],
+                [(1.5, 4.), (0., 4.), (0., 2.), (1.5, 2.), (1.5, 4.)]]
+    test_indices = [1, 4, 5]
+    neighbours = polygon_tools.neighbours_by_idx(polygons=polygons,
+                                                 test_indices=test_indices)
+    assert np.all(neighbours[1] == np.array([0, 2, 3]))
+    assert np.all(neighbours[4] == np.array([3,]))
+    assert np.all(neighbours[5] == np.array([-1]))
+    return
+
+
 def test_neighours_0():
+    # test c++ extension directly
     N_polygons = 6
     N_test = 3
     polygon_setup(N_polygons=N_polygons, N_test=N_test)
-    from polygon_tools import find_neighbours
+    from polygon_tools.polygon_tools_ext import find_neighbours
     find_neighbours()
     # expected:
     #   1 -> (0, 2, 3)
@@ -86,16 +104,17 @@ def test_neighours_0():
     expected[0] = np.array([0, 2, 3])
     expected[1] = np.array([3,])
     for i in range(N_test):
-        neighbours = np.load(f'data/neighbours_{i}.npy')
+        neighbours = np.load(f'data/_temp_neighbours_{i}.npy')
         assert np.all(expected[i] == neighbours)
     cleanup(N_test=N_test)
     return
 
 def test_neighours_1():
+    # test c++ extension directly
     N_polygons = 25
     N_test = N_CPU
     polygon_setup(N_polygons=N_polygons, N_test=N_test)
-    from polygon_tools import find_neighbours
+    from polygon_tools.polygon_tools_ext import find_neighbours
     find_neighbours()
     # expected:
     #   1 -> (0, 2, 3)
@@ -105,7 +124,7 @@ def test_neighours_1():
     expected[0] = np.array([0, 2, 3])
     expected[1] = np.array([3,])
     for i in range(N_test):
-        neighbours = np.load(f'data/neighbours_{i}.npy')
+        neighbours = np.load(f'data/_temp_neighbours_{i}.npy')
         assert np.all(expected[i] == neighbours)
     cleanup(N_test=N_test)
     return

@@ -1,6 +1,6 @@
 from distutils.core import setup, Extension
 
-polygon_module = Extension('polygon_tools',
+polygon_module = Extension('polygon_tools_ext',
                            sources = ['src/polygon_tools/find_neighbours.cpp'])
 
 long_description = """Various CPython extensions for manipulating and analysing
