@@ -8,12 +8,11 @@
   #include <Python.h>
 #endif
 
-#define DEBUG
+#define DEBUG_MAIN
 // #define DBG_IDX_LOAD
 // #define DBG_POLY_LOAD
 // #define DEBUG_TASK
 // #define DEBUG_LOADING
-// #define PARALLEL
 
 #include <vector>
 #include <string>
@@ -22,8 +21,9 @@
 #include <stdexcept>
 #include "cnpy.h"
 
+// #define PARALLEL
 #define INPUT_FILE "data/polygons_todo.npz"
-#define OUTPUT_FILE "data/neighbours.npy"
+#define OUTPUT_FILE_BASE "data/neighbours_"
 
 
 class Vertex {
@@ -224,8 +224,10 @@ std::vector<Polygon> polygons = load_polygons_from_npz(INPUT_FILE);
 const size_t n_polygons = polygons.size();
 
 
-void find_neighbours_task(const size_t test_polygon_idx,
-                          std::vector<long> &results)
+// to refactor / test
+//  Idea: have each thread write result to file. Maybe run more indices at once
+//    and check progress via python thread
+void find_neighbours_task(const size_t thread_idx)
 {
     #ifdef DEBUG_TASK
     std::cout << "TEST 0 " << test_polygon_idx << std::endl << std::flush;
@@ -268,155 +270,41 @@ extern "C" {
 #endif
 static PyObject* find_neighbours(PyObject* self, PyObject* args)
 {
-//     int py_n_test_indices;
-//     PyObject *py_test_polygon_indices;
-//    /* Parse the input tuple */
-//     if (!PyArg_ParseTuple(args, "iO", &py_n_test_indices,
-//                           &py_test_polygon_indices))
-//         return NULL;
-//     #ifdef DEBUG
-//     std::cout << "py_n_test_indices: " << py_n_test_indices << std::endl;
-//     #endif
+    // no arguments to parse, all input via .npy & .npz files.
 
-//     const size_t n_test_indices = (size_t) py_n_test_indices;
+    // tasks for this function:
+    //  * run tasks and manage threads
     
+    // test indices ought to be equal or multiple of the number of hardware
+    //  threads
+    const size_t N_THREADS = std::thread::hardware_concurrency();
 
-    for (size_t idx = 0; idx < n_test_indices; ++idx)
-        std::cout << "Test index " << idx << ": " << test_indices.at(idx) << std::endl;
-
-    std::vector<long> result;
-    for (size_t idx = 0; idx < n_test_indices; ++idx) {
-        result = std::vector<long>(9) = {99,99,99,99,99,99,99,99,99};
-        std::cout << "BEFORE: " << idx << " :::: ";
-        if(result.size()==0) std::cout << "empty vector" << std::endl;
-        else for (int i=0;i<9;++i) std::cout<<result.at(i)<<" ~ ";std::cout<<std::endl;
-        find_neighbours_task(-1, idx, result);
-        std::cout << "AFTER: " << idx << " :::: ";
-        for (int i=0;i<9;++i) std::cout<<result.at(i)<<" ~ ";std::cout<<std::endl;
-    }
-
-    Py_RETURN_NONE;
-
-    // check for the correct number of input values
     #ifdef PARALLEL
-    const size_t MAX_THREADS = std::thread::hardware_concurrency()-1;
-    // do not attempt to launch more threads than there are results to compute
-    const size_t N_THREADS = (n_test_indices < MAX_THREADS) ? n_test_indices : MAX_THREADS;
-    #endif
-
-    // initialise results vector
-    std::vector<std::vector<long>> results;
-    for (size_t idx = 0; idx < n_test_indices; ++idx)
-        results.push_back(std::vector<long>(9));
-
-    // DO STUFF IN PARALLEL
-    #ifdef PARALLEL
-    std::vector<std::thread> threads(MAX_THREADS-1);
-    #endif
-    for (size_t thread_idx = 0; thread_idx < n_test_indices; ++thread_idx) {
-        #ifdef PARALLEL
-        threads.at(thread_idx) = std::thread(find_neighbours_task, thread_idx,
-                                             test_polygon_indices.at(thread_idx),
-                                             results.at(thread_idx));
-        #else
-
-        #ifdef DEBUG
-        std::cout << std::endl;
-        std::cout << "LAUNCHING:" << std::endl;
-        std::cout << "\tthread_idx = " << thread_idx << std::endl;
-        std::cout << "\ttest_polygon_idx = " << test_indices.at(thread_idx) << std::endl;
-        std::cout << std::endl << std::flush;
-        #endif
-        find_neighbours_task(thread_idx, test_indices.at(thread_idx),
-                             results.at(thread_idx));
-        #endif
+    // keep record of threads
+    std::vector<std::thread> threads;
+    // threads are launched, then this 'main' thread runs one task...
+    for (size_t idx = 1; idx < N_THREADS; ++idx) {
+        threads.push_back(std::thread(find_neighbours_task, idx));
     }
-    #ifdef PARALLEL
-    for (size_t thread_idx = 0; thread_idx < n_test_indices - 1; ++thread_idx) {
-        threads.at(thread_idx).join();
-    }
-    #endif
-
-    #ifdef DEBUG
-    std::cout << "PROCESSING DONE" << std::endl << std::flush;
-    #endif
-
-    // build 2d output
-    size_t max_neighbours = 0;
-    for (size_t idx = 0; idx < n_test_indices; ++idx)
-        max_neighbours = std::max(max_neighbours, results.at(idx).size());
-    #define VECTOR_OUTPUT
-    #ifdef VECTOR_OUTPUT
-    std::vector<std::vector<long>> output;
-    for(int i = 0; i < n_test_indices; ++i)
-        output.push_back(std::vector<long>());
-    for(size_t i = 0; i < n_test_indices; ++i) {
-        const size_t length = results.at(i).size();
-        #ifdef DEBUG
-        std::cout << "Match Idcs for i=" << i << std::endl;
-        #endif
-        for (size_t j = 0; j < max_neighbours; ++j) {
-            if (j >= length)
-                output[i].push_back(-1);
-            else
-                output[i].push_back(results.at(i).at(j));
-                #ifdef DEBUG
-                std::cout << j << "=" << results.at(i).at(j);
-        std::cout << std::endl << std::endl;
-                #endif
-        }
+    // ...and joins the threads afterwards.
+    find_neighbours_task(0);
+    for (size_t idx = 0; idx < threads.size(); ++dx) {
+        threads.at(idx).join();
     }
     #else
-    int** output = new int*[n_test_indices];
-    for(int i = 0; i < n_test_indices; ++i)
-        output[i] = new int[max_neighbours];
-    for (size_t i = 0; i < n_test_indices; ++i) {
-        for (size_t j = 0; j < max_neighbours; ++j) {
-            int length = results.at(i).size();
-            if (j >= length)
-                output[i][j] = -1;
-            else
-                output[i][j] = results.at(i).at(j);
-        }
+    // for testing purposes, run tasks in order in the main thread
+    for (size_t idx = 0; idx < n_test_indices; ++idx) {
+        #ifdef DEBUG_MAIN
+        std::cout << "Running task " << idx << "... ";
+        #endif
+        find_neighbours_task(idx);
+        #ifdef DEBUG_MAIN
+        std::cout << "done." << std::endl;
+        #endif
     }
     #endif
 
-    #ifdef DEBUG
-    std::cout << "OUTPUT BUILDING DONE" << std::endl << std::flush;
-    #endif
-
-    PyObject * output_list = PyList_New(0);
-    for (size_t idx = 0; idx < n_test_indices; ++idx) 
-    {
-        PyObject * temp_list = PyList_New(0);
-        for (size_t j = 0; j < results.at(idx).size(); ++j) {
-            if (results.at(idx).at(j) == -1)
-                break;
-            PyList_Append(temp_list, Py_BuildValue("l", results.at(idx).at(j)));
-        }
-        PyList_Append(output_list, temp_list);
-    }
-    return output_list;
-
-
-    // // write output
-    // #ifdef VECTOR_OUTPUT
-    // cnpy::npy_save(OUTPUT_FILE, output.data(), {n_test_indices, max_neighbours}, "w");
-    // #else
-    // cnpy::npy_save(OUTPUT_FILE, output, {n_test_indices, max_neighbours}, "w");
-    // #endif
-
-    // #ifdef DEBUG
-    // std::cout << "OUTPUT SAVING DONE" << std::endl << std::flush;
-    // #endif
-
-    // #ifndef VECTOR_OUTPUT
-    // for(int i = 0; i < n_test_indices; ++i)
-    //     delete[] output[i];
-    // delete[] output;
-    // #endif
-
-    // Py_RETURN_NONE;
+    Py_RETURN_NONE;
 }
 
 
