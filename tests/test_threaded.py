@@ -4,6 +4,9 @@ import time
 import multiprocessing
 
 
+N_CPU = multiprocessing.cpu_count()
+
+
 def regular_polygon(n_vertices, x_offset, y_offset):
     assert n_vertices > 2
     angles = np.linspace(0., 2*np.pi, n_vertices+1)
@@ -13,9 +16,8 @@ def regular_polygon(n_vertices, x_offset, y_offset):
     return np.array(coord_pairs)
 
 
-def test_neighours():
-    N_polygons = 25
-    N_CPU = multiprocessing.cpu_count()
+def polygon_setup(N_polygons, N_test):
+    assert N_test >= 3
     data = {'n_polygons': N_polygons,
             'arr_0': np.array([(0., -1.), (1., 0.), (0., 1.), (-1., 0.), (0., -1.)]),
             'len_0' : 5,
@@ -29,7 +31,10 @@ def test_neighours():
             'len_4' : 4,
             'arr_5': np.array([(1.5, 4.), (0., 4.), (0., 2.), (1.5, 2.), (1.5, 4.)]),
             'len_5' : 5,
-            'test_indices': (1, 4, 5, 9, 16, 8, 21, 14)}
+            'test_indices': [1, 4, 5]}
+    if N_test > 3:
+        for _ in range(3, N_test):
+            data['test_indices'].append(np.random.randint(4, N_polygons))
     data['n_test_polygons'] = len(data['test_indices'])
     # add some random polygons which are not expected to share any edges.
     for i in range(6, N_polygons):
@@ -37,6 +42,12 @@ def test_neighours():
         x0, y0 = np.random.standard_normal(size=2)
         data[f'len_{i}'] = N + 1  # closed
         data[f'arr_{i}'] = regular_polygon(N, x0, y0)
+    try:
+        assert len(data) == (2 * N_polygons + 3)
+    except:
+        print(len(data))
+        print(list(data.keys()))
+        raise
     for i in range(N_polygons):
         try:
             assert data[f'len_{i}'] == data[f'arr_{i}'].shape[0]
@@ -44,25 +55,57 @@ def test_neighours():
             print(*sorted(list(data.keys())), sep='\n')
             raise
         assert data[f'arr_{i}'].shape[1] == 2
-    assert data['n_test_polygons'] == N_CPU, repr(N_CPU)
+    assert data['n_test_polygons'] == N_test, repr(N_test)
+    assert len(data['test_indices']) == N_test, repr(N_test)
     np.savez('data/polygons_todo.npz', **data)
     print('Save done.', flush=True)
-    time.sleep(1.)
+    time.sleep(0.2)
+    return
+
+
+def cleanup(N_test):
+    time.sleep(0.2)
+    os.remove('data/polygons_todo.npz')
+    for i in range(min(N_CPU, N_test)):
+        os.remove(f'data/neighbours_{i}.npy')
+    print('Test files removed.')
+    return
+
+
+def test_neighours_0():
+    N_polygons = 6
+    N_test = 3
+    polygon_setup(N_polygons=N_polygons, N_test=N_test)
     from polygon_tools import find_neighbours
     find_neighbours()
-    time.sleep(0.5)
     # expected:
     #   1 -> (0, 2, 3)
     #   4 -> (3,)
     #   5 -> (,)
-    expected = [np.array([-1])] * N_CPU
+    expected = [np.array([-1])] * N_test
     expected[0] = np.array([0, 2, 3])
     expected[1] = np.array([3,])
-    for i in range(multiprocessing.cpu_count()):
+    for i in range(N_test):
         neighbours = np.load(f'data/neighbours_{i}.npy')
         assert np.all(expected[i] == neighbours)
+    cleanup(N_test=N_test)
+    return
 
-    os.remove('data/polygons_todo.npz')
-    for i in range(multiprocessing.cpu_count()):
-        os.remove(f'data/neighbours_{i}.npy')
+def test_neighours_1():
+    N_polygons = 25
+    N_test = N_CPU
+    polygon_setup(N_polygons=N_polygons, N_test=N_test)
+    from polygon_tools import find_neighbours
+    find_neighbours()
+    # expected:
+    #   1 -> (0, 2, 3)
+    #   4 -> (3,)
+    #   5 -> (,)
+    expected = [np.array([-1])] * N_test
+    expected[0] = np.array([0, 2, 3])
+    expected[1] = np.array([3,])
+    for i in range(N_test):
+        neighbours = np.load(f'data/neighbours_{i}.npy')
+        assert np.all(expected[i] == neighbours)
+    cleanup(N_test=N_test)
     return

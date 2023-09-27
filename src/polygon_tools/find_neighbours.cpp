@@ -8,11 +8,11 @@
   #include <Python.h>
 #endif
 
-#define DEBUG_MAIN
-#define DBG_IDX_LOAD
-#define DBG_POLY_LOAD
-#define DEBUG_TASK
-#define DEBUG_LOADING
+// #define DEBUG_MAIN
+// #define DBG_IDX_LOAD
+// #define DBG_POLY_LOAD
+// #define DEBUG_TASK
+// #define DEBUG_LOADING
 
 #include <vector>
 #include <string>
@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include "cnpy.h"
 
-// #define PARALLEL
+#define PARALLEL
 #define INPUT_FILE "data/polygons_todo.npz"
 #define OUTPUT_FILE_BASE "data/neighbours_"
 
@@ -219,10 +219,10 @@ const std::vector<Polygon> load_polygons_from_npz(const std::string path)
 
 
 // load the input data and make it available globally
-std::vector<size_t> test_indices = load_test_indices_from_npy(INPUT_FILE);
-const size_t n_test_indices = test_indices.size();
-std::vector<Polygon> polygons = load_polygons_from_npz(INPUT_FILE);
-const size_t n_polygons = polygons.size();
+std::vector<size_t> test_indices;
+size_t n_test_indices;
+std::vector<Polygon> polygons;
+size_t n_polygons;
 
 
 // to refactor / test
@@ -230,12 +230,17 @@ const size_t n_polygons = polygons.size();
 //    and check progress via python thread
 void find_neighbours_task(const size_t thread_idx)
 {
+    if(thread_idx >= test_indices.size())
+        return;
     const size_t test_polygon_idx = test_indices.at(thread_idx);
 
     #ifdef DEBUG_TASK
     std::cout << "CHECKPOINT 0 " << test_polygon_idx << " :: " << thread_idx << std::endl << std::flush;
     #endif
 
+    #ifdef DEBUG_TASK
+    std::cout << "POLYGON ACCESS: " << thread_idx << " :: " << test_polygon_idx << std::endl << std::flush;
+    #endif
     Polygon test_polygon = polygons.at(test_polygon_idx);
 
     #ifdef DEBUG_TASK
@@ -284,6 +289,10 @@ extern "C" {
 static PyObject* find_neighbours(PyObject* self, PyObject* args)
 {
     // no arguments to parse, all input via .npy & .npz files.
+    test_indices = load_test_indices_from_npy(INPUT_FILE);
+    n_test_indices = test_indices.size();
+    polygons = load_polygons_from_npz(INPUT_FILE);
+    n_polygons = polygons.size();
 
     // tasks for this function:
     //  * run tasks and manage threads
@@ -291,17 +300,18 @@ static PyObject* find_neighbours(PyObject* self, PyObject* args)
     // test indices ought to be equal or multiple of the number of hardware
     //  threads
     const size_t N_THREADS = std::thread::hardware_concurrency();
+    const size_t N_THREADS_USED = (N_THREADS > n_test_indices) ? n_test_indices : N_THREADS;
 
     #ifdef PARALLEL
     // keep record of threads
     std::vector<std::thread> threads;
     // threads are launched, then this 'main' thread runs one task...
-    for (size_t idx = 1; idx < N_THREADS; ++idx) {
+    for (size_t idx = 1; idx < N_THREADS_USED; ++idx) {
         threads.push_back(std::thread(find_neighbours_task, idx));
     }
     // ...and joins the threads afterwards.
     find_neighbours_task(0);
-    for (size_t idx = 0; idx < threads.size(); ++dx) {
+    for (size_t idx = 0; idx < threads.size(); ++idx) {
         threads.at(idx).join();
     }
     #else
