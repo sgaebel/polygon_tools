@@ -9,10 +9,10 @@
 #endif
 
 #define DEBUG_MAIN
-// #define DBG_IDX_LOAD
-// #define DBG_POLY_LOAD
-// #define DEBUG_TASK
-// #define DEBUG_LOADING
+#define DBG_IDX_LOAD
+#define DBG_POLY_LOAD
+#define DEBUG_TASK
+#define DEBUG_LOADING
 
 #include <vector>
 #include <string>
@@ -165,7 +165,7 @@ class Polygon {
 
 const std::vector<size_t> load_test_indices_from_npy(const std::string path)
 {
-    cnpy::NpyArray temp = cnpy::npz_load(path, "n_test");
+    cnpy::NpyArray temp = cnpy::npz_load(path, "n_test_polygons");
     const size_t n_test_points = *temp.data<size_t>();
     #ifdef DBG_IDX_LOAD
     std::cout << "n_test_points = " << n_test_points << std::endl;
@@ -173,11 +173,12 @@ const std::vector<size_t> load_test_indices_from_npy(const std::string path)
     temp = cnpy::npz_load(path, "test_indices");
     size_t* idx_array = temp.data<size_t>();
     std::vector<size_t> test_indices;
-    for(size_t idx = 0; idx < n_test_points; ++idx)
+    for(size_t idx = 0; idx < n_test_points; ++idx) {
         test_indices.push_back(idx_array[idx]);
         #ifdef DBG_IDX_LOAD
         std::cout << "test idx " << idx << "=" << idx_array[idx] << std::endl;
         #endif
+    }
     return test_indices;
 }
 
@@ -204,7 +205,7 @@ const std::vector<Polygon> load_polygons_from_npz(const std::string path)
         for(size_t i = 0; i < length; ++i) {
             polygon_data.push_back(Vertex(data[2*i], data[2*i+1]));
             #ifdef DBG_POLY_LOAD
-            std::cout << "loaded vertex: " << polygon_data.back() << std::endl;
+            std::cout << "loaded vertex: " << std::string(polygon_data.back()) << std::endl;
             #endif
         }
         if (polygon_data.front() != polygon_data.back()) {
@@ -268,7 +269,10 @@ void find_neighbours_task(const size_t thread_idx)
     if (matches.size() == 0)
         matches.push_back(-1);
     // write results to disk
-    std::string out_path = OUTPUT_FILE_BASE + std::to_string(thread_idx); + ".npy";
+    std::string out_path = OUTPUT_FILE_BASE + std::to_string(thread_idx) + ".npy";
+    #ifdef DEBUG_TASK
+    std::cout << "Output file name: " << out_path << std::endl << std::flush;
+    #endif
     cnpy::npy_save(out_path, &matches[0], {matches.size()}, "w");
     return;
 }
