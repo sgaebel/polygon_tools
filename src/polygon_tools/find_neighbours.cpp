@@ -19,11 +19,12 @@
 #include <thread>
 #include <algorithm>
 #include <stdexcept>
+#include <filesystem>
 #include "cnpy.h"
 
 #define PARALLEL
-#define INPUT_FILE "data/_temp_polygons_todo.npz"
-#define OUTPUT_FILE_BASE "data/_temp_neighbours_"
+#define INPUT_FILE "/tmp/_temp_polygons_todo.npz"
+#define OUTPUT_FILE_BASE "/tmp/_temp_polygon_neighbours_"
 
 
 class Vertex {
@@ -289,10 +290,20 @@ extern "C" {
 static PyObject* find_neighbours(PyObject* self, PyObject* args)
 {
     // no arguments to parse, all input via .npy & .npz files.
-    test_indices = load_test_indices_from_npy(INPUT_FILE);
-    n_test_indices = test_indices.size();
-    polygons = load_polygons_from_npz(INPUT_FILE);
-    n_polygons = polygons.size();
+    if (std::filesystem::exists(std::filesystem::path(INPUT_FILE))) {
+        test_indices = load_test_indices_from_npy(INPUT_FILE);
+        n_test_indices = test_indices.size();
+        polygons = load_polygons_from_npz(INPUT_FILE);
+        n_polygons = polygons.size();
+    }
+    else {
+        std::string message = "Input file \"";
+        message += INPUT_FILE;
+        message +=  "\" not found.";
+        PyErr_SetString(PyExc_FileNotFoundError, message.c_str());
+        return NULL;
+    }
+    // std::cout << "Blubb" << std::endl << std::flush;
 
     // tasks for this function:
     //  * run tasks and manage threads
@@ -363,14 +374,14 @@ static PyMethodDef pt_methods[] = {
 
 static struct PyModuleDef pt_module = {
     PyModuleDef_HEAD_INIT,
-    "polygon_tools",
+    "polygon_neighbours",
     NULL,
     -1,
     pt_methods
 };
 
 
-PyMODINIT_FUNC PyInit_polygon_tools(void)
+PyMODINIT_FUNC PyInit_polygon_neighbours(void)
 {
     return PyModule_Create(&pt_module);
 }
