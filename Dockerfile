@@ -5,7 +5,5 @@ WORKDIR /src
 
 # python3.10 -m build --outdir /output
 # python3.10 -m build --sdist --outdir /output
-# auditwheel repair /output/*whl -w /output
-# yes | rm /output/*-linux_*
 # docker container ls
-# docker cp romantic_euclid:/output dist
+# docker cp <container_name>:/output dist

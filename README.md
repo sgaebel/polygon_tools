@@ -1,7 +1,13 @@
 # Polygon_Tools
 
-Various tools for manipulating polygons.
+Meta-package of multiple CPython extensions for manipulating and analysing polygons. It specifically adds a wrapper for the `polygon_neighbours` submodule to make it much more user friendly.
 
-## find_heighbours
+## Submodules
 
-Finds polygons with shared edges so they can be selected for annealing.
+We expose these functions:
+
+`polygon_contains_point` => `point_in_polygon`
+
+`polygons_share_edge` => `share_edge`
+
+`polygon_neighbours` => `bordering_polygons` (Wrapper for `find_neighbours`)
