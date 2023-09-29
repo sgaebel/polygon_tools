@@ -1,7 +1,6 @@
 clean:
-	rm -rf .pytest_cache/ polygon_neighbours.cpython-310-x86_64-linux-gnu.so polygon_neighbours.egg-info/ build/
-	yes | pip3 uninstall polygon_neighbours || true
-	rm data/* || true
+	rm -rf .pytest_cache/ tests/_pycache__/ src/polygon_tools.egg-info/ build/
+	yes | pip3 uninstall polygon_tools || true
 
 install:
 	pip3 install --user .

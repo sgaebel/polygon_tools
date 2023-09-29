@@ -1,21 +1,19 @@
-from distutils.core import setup, Extension
+from distutils.core import setup
 
-polygon_module = Extension('polygon_neighbours',
-                           sources = ['src/polygon_tools/find_neighbours.cpp'])
-
-long_description = """Various CPython extensions for manipulating and analysing
-polygons.
+long_description = """Metapackage of various CPython extensions
+for manipulating and analysing polygons.
 """
 
-setup (name = 'polygon_neighbours',
+setup (name = 'polygon_tools',
        version = '1.0',
-       description = 'CPython extension for finding bordering polygons.',
+       description = 'Collection of polygon extensions.',
        url = 'https://github.com/sgaebel/polygon_tools',
        author = 'Dr. Sebastian M. Gaebel',
        author_email = 'gaebel.sebastian@gmail.com',
        license = 'MIT',
-       ext_modules = [polygon_module],
        long_description = long_description,
+       install_requires = ['numpy', 'polygon_neighbours', 'polygons_share_edge',
+                           'polygon_contains_point'],
        classifiers = [
               'Development Status :: 5 - Production/Stable',
               'Intended Audience :: Developers',
