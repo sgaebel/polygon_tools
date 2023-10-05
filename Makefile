@@ -7,3 +7,12 @@ install:
 
 test: clean install
 	pytest
+
+wheel:
+	rm dist/* || true
+	docker build -t polygontools:builder .
+	docker run --rm polygontools:builder &
+	sleep 30
+	bash scripts/build--copy-output.sh
+	ls -lah dist/
+
