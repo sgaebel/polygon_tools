@@ -49,7 +49,7 @@ def bordering_polygons(polygons: list, test_indices: _Iterable,
     data['test_indices'] = _np.array(test_indices)
     data['n_test_polygons'] = len(test_indices)
     _np.savez(input_path, **data)
-    _find_neighbours(progress_step=progress_step, verbose=verbose,
+    _find_neighbours(progress_step_size=progress_step, verbose=verbose,
                      parallel=parallel)
     neighbours = {}
     for idx, test_idx in enumerate(test_indices):
