@@ -6,7 +6,9 @@ from polygon_neighbours import find_neighbours as _find_neighbours
 
 
 # convenience wrapper for find_neighbours
-def bordering_polygons(polygons: list, test_indices: _Iterable) -> dict:
+def bordering_polygons(polygons: list, test_indices: _Iterable,
+                       progress_step: int=0, verbose:bool=False,
+                       parallel: bool=True) -> dict:
     """
     Wraps `polygon_neighbours.find_neighbours` to provide a
     usable, pythonic interface.
@@ -20,6 +22,15 @@ def bordering_polygons(polygons: list, test_indices: _Iterable) -> dict:
     test_indices: Iterable
         Iterable containing the polygons for which bordering
         polygons are searched.
+    progress_step_size: int
+        Interval at which progress is printed, in overall polygon counts.
+        i.e. after every x globally processed polygons, progress is printed.
+        If 0, no progress is printed. Default value is 0.
+    verbose: bool | int
+        Toggles the verbosity to print some useful threading and timing
+        information. Adds a ~100ms delay to every call. Default value is False.
+    parallel: bool | int
+        Toggles if the search shoul be run in parallel. Default value is True.
 
     Returns
     -------
@@ -38,7 +49,8 @@ def bordering_polygons(polygons: list, test_indices: _Iterable) -> dict:
     data['test_indices'] = _np.array(test_indices)
     data['n_test_polygons'] = len(test_indices)
     _np.savez(input_path, **data)
-    _find_neighbours()
+    _find_neighbours(progress_step=progress_step, verbose=verbose,
+                     parallel=parallel)
     neighbours = {}
     for idx, test_idx in enumerate(test_indices):
         result = _np.load(output_path_template.format(idx=idx))
