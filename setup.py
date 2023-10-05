@@ -5,7 +5,7 @@ for manipulating and analysing polygons.
 """
 
 setup (name = 'polygon_tools',
-       version = '1.0',
+       version = '1.0.1',
        description = 'Collection of polygon extensions.',
        url = 'https://github.com/sgaebel/polygon_tools',
        author = 'Dr. Sebastian M. Gaebel',
